@@ -20,10 +20,44 @@ static void advance(Lexer *l)
   }
 }
 
-static void skip_whitespace(Lexer *l)
+static void skip_whitespace_commments(Lexer *l)
 {
-  while(l->cursor < l->content_len && isspace(peek(l))){
-    advance(l);
+  while(l->cursor < l->content_len) {
+    char c = peek(l);
+
+    if(isspace((unsigned char)c)) {
+      advance(l);
+      continue;
+    }
+
+    if(c == '/' && l->cursor + 1 < l->content_len) {
+      char next_c = l->content[l->cursor + 1];
+
+      if(next_c == '/') {
+	while(l->cursor < l->content_len && peek(l) != '\n') {
+	  advance(l);
+	}
+
+	continue;
+      }
+
+      if(next_c == '*') {
+	advance(l);
+	advance(l);
+
+	while(l->cursor < l->content_len) {
+	  if(peek(l) == '*' && l->cursor + 1 < l->content_len && l->content[l->cursor + 1] == '/') {
+	    advance(l);
+	    advance(l);
+	    break;
+	  }
+	  advance(l);
+	}
+	continue;
+      }
+    }
+
+    break;
   }
 }
 
@@ -47,7 +81,7 @@ Lexer lexer_new(const char *content, size_t content_len)
 
 Token lexer_next(Lexer *l)
 {
-  skip_whitespace(l);
+  skip_whitespace_commments(l);
   Token token = {0};
   token.text = &l->content[l->cursor];
 
