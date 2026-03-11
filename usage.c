@@ -25,6 +25,18 @@ char *read_file(const char *file, size_t *out_len)
   return buffer;
 }
 
+const char *print_kw_kind(Keyword_kind kw_kind)
+{
+  switch(kw_kind) {
+  case KW_NONE:   return "KW_NONE";
+  case KW_INT:    return "KW_INT";
+  case KW_RETURN: return "KW_RETURN";
+  case KW_IF:     return "KW_IF";
+  default:        return "UNKNOWN_KW";
+  }
+  
+}
+
 int main(int argc, char **argv)
 {
   const char *source = argv[1];
@@ -41,13 +53,23 @@ int main(int argc, char **argv)
   
   do {
     token = lexer_next(&l);
+    
+    if(token.kind == TOKEN_KEYWORD) {
+          printf("Line: %2zu | Kind: %-14s | HASH: %10lu | Text: '%.*s'\n",
+		 l.line,
+		 print_kw_kind(token.kw_kind),
+		 token.hash,
+		 (int)token.text_len,
+		 token.text);
 
+    } else {
     printf("Line: %2zu | Kind: %d | HASH: %10lu | Text: '%.*s'\n",
 	   l.line,
 	   token.kind,
 	   token.hash,
 	   (int)token.text_len,
 	   token.text);
+    }
   } while(token.kind != TOKEN_END && token.kind != TOKEN_INVALID);
 
   free(content);
