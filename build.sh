@@ -10,8 +10,27 @@ SRC="lexer.c"
 OBJ="lexer.o"
 LIB="liblexer.a"
 
-# compile source to object file
-$CC $CFLAGS -c $SRC -o $OBJ
+build() {
+    # compile source to object file
+    $CC $CFLAGS -c $SRC -o $OBJ
 
-# create static library
-ar rcs $LIB $OBJ
+    # create static library
+    ar rcs $LIB $OBJ
+}
+
+test() {
+    $CC -o usage usage.c -L. -llexer
+}
+
+case "$1" in
+    build)
+        build
+        ;;
+    test)
+        test
+        ;;
+    *)
+        echo "Usage: $0 {build|test|clean}"
+        exit 1
+        ;;
+esac
