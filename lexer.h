@@ -4,10 +4,18 @@
 #include <stddef.h>
 
 typedef enum {
+  KW_NONE = 0,
+  KW_INT,
+  KW_RETURN, 
+  KW_IF,
+} Keyword_kind;
+
+typedef enum {
   TOKEN_END = 0,
   TOKEN_INVALID,
   TOKEN_HASH,
   TOKEN_SYMBOL,
+  TOKEN_KEYWORD,
   TOKEN_NUMBER,
   TOKEN_STRING,
   TOKEN_EQUALS,
@@ -26,6 +34,7 @@ typedef enum {
 
 typedef struct {
   Token_kind kind;
+  Keyword_kind kw_kind;
   const char *text;
   size_t text_len;
   unsigned long hash;

@@ -1,5 +1,7 @@
-#include "lexer.h"
 #include <ctype.h>
+#include <string.h>
+
+#include "lexer.h"
 
 static char peek(Lexer *l)
 {
@@ -61,6 +63,24 @@ static void skip_whitespace_commments(Lexer *l)
   }
 }
 
+static void check_keyword(Token *token)
+{
+  token->kw_kind = KW_NONE;
+
+  if(token->text_len == 3 && strncmp(token->text, "int", 3) == 0) {
+    token->kind = TOKEN_KEYWORD;
+    token->kw_kind = KW_INT;
+  }
+  else if (token->text_len == 6 && strncmp(token->text, "return", 6) == 0) {
+    token->kind = TOKEN_KEYWORD;
+    token->kw_kind = KW_RETURN;
+  }
+  else if (token->text_len == 2 && strncmp(token->text, "if", 2) == 0) {
+    token->kind = TOKEN_KEYWORD;
+    token->kw_kind = KW_IF;
+  }
+}
+
 static unsigned long hash_string(const char *str, size_t len)
 {
   unsigned long hash = 5381;
@@ -79,6 +99,7 @@ Lexer lexer_new(const char *content, size_t content_len)
   return l;
 }
 
+/* TODO: use hash array for O(1) */
 Token lexer_next(Lexer *l)
 {
   skip_whitespace_commments(l);
@@ -159,6 +180,7 @@ Token lexer_next(Lexer *l)
     }
     token.text_len = l->cursor - start_cursor;
     token.hash = hash_string(token.text, token.text_len);
+    check_keyword(&token);
     return token;
   }
 
