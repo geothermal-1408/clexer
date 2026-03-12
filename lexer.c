@@ -137,7 +137,6 @@ Lexer lexer_new(const char *content, size_t content_len)
   return l;
 }
 
-/* TODO: use hash array for O(1) */
 Token lexer_next(Lexer *l)
 {
   skip_whitespace_commments(l);
