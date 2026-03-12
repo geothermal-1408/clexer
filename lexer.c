@@ -3,6 +3,52 @@
 
 #include "lexer.h"
 
+#define KEYWORD_TABLE_SIZE 64
+
+typedef struct {
+  const char *text;
+  size_t len;
+  int kw_kind;
+} KeywordEntry;
+
+static KeywordEntry keyword_table[KEYWORD_TABLE_SIZE];
+static int keyword_table_init = 0;
+
+static unsigned long hash_string(const char *str, size_t len)
+{
+  unsigned long hash = 5381;
+  for(size_t i = 0; i < len; ++i) {
+    hash = ((hash << 5) + hash) + str[i];
+  }
+  return hash;
+}
+
+static void insert_keyword(const char *text, int kw_kind)
+{
+  size_t len = strlen(text);
+  unsigned long hash = hash_string(text, len);
+  size_t index = hash % KEYWORD_TABLE_SIZE;
+
+  //using linear probing
+  while(keyword_table[index].text != NULL) {
+    index = (index + 1) % KEYWORD_TABLE_SIZE;
+  }
+  keyword_table[index].text = text;
+  keyword_table[index].len = len;
+  keyword_table[index].kw_kind = kw_kind;
+}
+
+static void init_keyword_table(void)
+{
+  if(keyword_table_init) return;
+
+  insert_keyword("int", KW_INT);
+  insert_keyword("return", KW_RETURN);
+  insert_keyword("if", KW_IF);
+
+  keyword_table_init = 1;
+}
+
 static char peek(Lexer *l)
 {
   if(l->cursor >= l->content_len) {
@@ -67,27 +113,19 @@ static void check_keyword(Token *token)
 {
   token->kw_kind = KW_NONE;
 
-  if(token->text_len == 3 && strncmp(token->text, "int", 3) == 0) {
-    token->kind = TOKEN_KEYWORD;
-    token->kw_kind = KW_INT;
-  }
-  else if (token->text_len == 6 && strncmp(token->text, "return", 6) == 0) {
-    token->kind = TOKEN_KEYWORD;
-    token->kw_kind = KW_RETURN;
-  }
-  else if (token->text_len == 2 && strncmp(token->text, "if", 2) == 0) {
-    token->kind = TOKEN_KEYWORD;
-    token->kw_kind = KW_IF;
-  }
-}
+  init_keyword_table();
 
-static unsigned long hash_string(const char *str, size_t len)
-{
-  unsigned long hash = 5381;
-  for(size_t i = 0; i < len; ++i) {
-    hash = ((hash << 5) + hash) + str[i];
+  size_t index = token->hash % KEYWORD_TABLE_SIZE;
+  
+  while(keyword_table[index].text != NULL){
+    if(keyword_table[index].len == token->text_len &&
+       strncmp(keyword_table[index].text, token->text, token->text_len) ==0) {
+      token->kind = TOKEN_KEYWORD;
+      token->kw_kind = keyword_table[index].kw_kind;
+      return;
+    }
+    index = (index + 1) % KEYWORD_TABLE_SIZE;
   }
-  return hash;
 }
 
 Lexer lexer_new(const char *content, size_t content_len)
