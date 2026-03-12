@@ -19,7 +19,7 @@ build() {
 }
 
 test() {
-    $CC -o usage usage.c -L. -llexer
+    $CC $CFLAGS -o usage usage.c -L. -llexer
 }
 
 case "$1" in
@@ -30,7 +30,7 @@ case "$1" in
         test
         ;;
     *)
-        echo "Usage: $0 {build|test|clean}"
+        echo "Usage: $0 {build|test}"
         exit 1
         ;;
 esac
