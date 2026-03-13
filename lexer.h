@@ -13,23 +13,71 @@ typedef enum {
 typedef enum {
   TOKEN_END = 0,
   TOKEN_INVALID,
+
+  /* literals & identifiers */
   TOKEN_HASH,
   TOKEN_SYMBOL,
   TOKEN_KEYWORD,
   TOKEN_NUMBER,
   TOKEN_STRING,
-  TOKEN_EQUALS,
-  TOKEN_EQEQ,
+
+  /* assignment */
+  TOKEN_EQUALS,   
+  TOKEN_PLUSEQ,   
+  TOKEN_MINUSEQ,  
+  TOKEN_STAREQ,   
+  TOKEN_SLASHEQ,  
+  TOKEN_PERCENTEQ,
+  TOKEN_AMPEQ,    
+  TOKEN_PIPEEQ,   
+  TOKEN_CARETEQ,  
+  TOKEN_LSHIFTEQ, 
+  TOKEN_RSHIFTEQ, 
+
+  /* arithmetic */
+  TOKEN_PLUS,   
+  TOKEN_MINUS,  
+  TOKEN_STAR,   
+  TOKEN_SLASH,  
+  TOKEN_PERCENT,
+
+  /* increment / decrement */
+  TOKEN_PLUSPLUS,  
+  TOKEN_MINUSMINUS,
+
+  /* punctuation */
   TOKEN_LPAREN,
   TOKEN_RPAREN,
   TOKEN_LBRACE,
   TOKEN_RBRACE,
   TOKEN_SEMICOLON,
   TOKEN_COMMA,
-  TOKEN_LT,
-  TOKEN_GT,
   TOKEN_DOT,
 
+  /* relational / equality */
+  TOKEN_LT,
+  TOKEN_GT,
+  TOKEN_EQEQ,
+  TOKEN_LTEQ,
+  TOKEN_GTEQ,  
+  TOKEN_BANGEQ,
+
+  /* bitwise */
+  TOKEN_AMP,   
+  TOKEN_PIPE,  
+  TOKEN_CARET, 
+  TOKEN_TILDE, 
+  TOKEN_LSHIFT,
+  TOKEN_RSHIFT,
+
+  /* logical */
+  TOKEN_AMPAMP,  
+  TOKEN_PIPEPIPE,
+  TOKEN_BANG,
+   
+  /* misc */
+  TOKEN_ARROW,
+  
 } Token_kind;
 
 typedef struct {
@@ -38,6 +86,8 @@ typedef struct {
   const char *text;
   size_t text_len;
   unsigned long hash;
+  size_t line;
+  size_t col;
 } Token;
 
 typedef struct {

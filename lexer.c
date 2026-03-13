@@ -5,7 +5,41 @@
 
 #define KEYWORD_TABLE_SIZE 64
 
-typedef struct {
+// single character
+#define SINGLE(k)       \
+  do                    \
+  {                     \
+    token.kind = (k);   \
+    token.text_len = 1; \
+    advance(l);         \
+    return token;       \
+  } while (0)
+
+// two character
+#define DOUBLE(k)       \
+  do                    \
+  {                     \
+    token.kind = (k);   \
+    token.text_len = 2; \
+    advance(l);         \
+    advance(l);         \
+    return token;       \
+  } while (0)
+
+// Three character
+#define TRIPLE(k)       \
+  do                    \
+  {                     \
+    token.kind = (k);   \
+    token.text_len = 3; \
+    advance(l);         \
+    advance(l);         \
+    advance(l);         \
+    return token;       \
+  } while (0)
+
+typedef struct
+{
   const char *text;
   size_t len;
   int kw_kind;
@@ -17,7 +51,8 @@ static int keyword_table_init = 0;
 static unsigned long hash_string(const char *str, size_t len)
 {
   unsigned long hash = 5381;
-  for(size_t i = 0; i < len; ++i) {
+  for (size_t i = 0; i < len; ++i)
+  {
     hash = ((hash << 5) + hash) + str[i];
   }
   return hash;
@@ -29,8 +64,9 @@ static void insert_keyword(const char *text, int kw_kind)
   unsigned long hash = hash_string(text, len);
   size_t index = hash % KEYWORD_TABLE_SIZE;
 
-  //using linear probing
-  while(keyword_table[index].text != NULL) {
+  // using linear probing
+  while (keyword_table[index].text != NULL)
+  {
     index = (index + 1) % KEYWORD_TABLE_SIZE;
   }
   keyword_table[index].text = text;
@@ -40,7 +76,8 @@ static void insert_keyword(const char *text, int kw_kind)
 
 static void init_keyword_table(void)
 {
-  if(keyword_table_init) return;
+  if (keyword_table_init)
+    return;
 
   insert_keyword("int", KW_INT);
   insert_keyword("return", KW_RETURN);
@@ -51,16 +88,28 @@ static void init_keyword_table(void)
 
 static char peek(Lexer *l)
 {
-  if(l->cursor >= l->content_len) {
+  if (l->cursor >= l->content_len)
+  {
     return '\0';
   }
   return l->content[l->cursor];
 }
 
+static char peek_next(Lexer *l)
+{
+  if (l->cursor + 1 >= l->content_len)
+  {
+    return '\0';
+  }
+  return l->content[l->cursor + 1];
+}
+
 static void advance(Lexer *l)
 {
-  if(l->cursor < l->content_len) {
-    if(l->content[l->cursor] == '\n') {
+  if (l->cursor < l->content_len)
+  {
+    if (l->content[l->cursor] == '\n')
+    {
       l->line++;
       l->bol = l->cursor + 1;
     }
@@ -70,38 +119,46 @@ static void advance(Lexer *l)
 
 static void skip_whitespace_commments(Lexer *l)
 {
-  while(l->cursor < l->content_len) {
+  while (l->cursor < l->content_len)
+  {
     char c = peek(l);
 
-    if(isspace((unsigned char)c)) {
+    if (isspace((unsigned char)c))
+    {
       advance(l);
       continue;
     }
 
-    if(c == '/' && l->cursor + 1 < l->content_len) {
+    if (c == '/' && l->cursor + 1 < l->content_len)
+    {
       char next_c = l->content[l->cursor + 1];
 
-      if(next_c == '/') {
-	while(l->cursor < l->content_len && peek(l) != '\n') {
-	  advance(l);
-	}
+      if (next_c == '/')
+      {
+        while (l->cursor < l->content_len && peek(l) != '\n')
+        {
+          advance(l);
+        }
 
-	continue;
+        continue;
       }
 
-      if(next_c == '*') {
-	advance(l);
-	advance(l);
+      if (next_c == '*')
+      {
+        advance(l);
+        advance(l);
 
-	while(l->cursor < l->content_len) {
-	  if(peek(l) == '*' && l->cursor + 1 < l->content_len && l->content[l->cursor + 1] == '/') {
-	    advance(l);
-	    advance(l);
-	    break;
-	  }
-	  advance(l);
-	}
-	continue;
+        while (l->cursor < l->content_len)
+        {
+          if (peek(l) == '*' && l->cursor + 1 < l->content_len && l->content[l->cursor + 1] == '/')
+          {
+            advance(l);
+            advance(l);
+            break;
+          }
+          advance(l);
+        }
+        continue;
       }
     }
 
@@ -116,10 +173,12 @@ static void check_keyword(Token *token)
   init_keyword_table();
 
   size_t index = token->hash % KEYWORD_TABLE_SIZE;
-  
-  while(keyword_table[index].text != NULL){
-    if(keyword_table[index].len == token->text_len &&
-       strncmp(keyword_table[index].text, token->text, token->text_len) ==0) {
+
+  while (keyword_table[index].text != NULL)
+  {
+    if (keyword_table[index].len == token->text_len &&
+        strncmp(keyword_table[index].text, token->text, token->text_len) == 0)
+    {
       token->kind = TOKEN_KEYWORD;
       token->kw_kind = keyword_table[index].kw_kind;
       return;
@@ -142,77 +201,212 @@ Token lexer_next(Lexer *l)
   skip_whitespace_commments(l);
   Token token = {0};
   token.text = &l->content[l->cursor];
+  token.line = l->line;
+  token.col = l->cursor - l->bol + 1;
 
-  if(l->cursor >= l->content_len) {
+  if (l->cursor >= l->content_len)
+  {
     token.kind = TOKEN_END;
     token.text_len = 0;
     return token;
   }
 
   char c = peek(l);
+  char next = peek_next(l);
 
-  switch (c) {
-      case '#': token.kind = TOKEN_HASH;      token.text_len = 1; advance(l); return token;
-      case '(': token.kind = TOKEN_LPAREN;    token.text_len = 1; advance(l); return token;
-      case ')': token.kind = TOKEN_RPAREN;    token.text_len = 1; advance(l); return token;
-      case '{': token.kind = TOKEN_LBRACE;    token.text_len = 1; advance(l); return token;
-      case '}': token.kind = TOKEN_RBRACE;    token.text_len = 1; advance(l); return token;
-      case ';': token.kind = TOKEN_SEMICOLON; token.text_len = 1; advance(l); return token;
-      case ',': token.kind = TOKEN_COMMA;     token.text_len = 1; advance(l); return token;
-      case '<': token.kind = TOKEN_LT;        token.text_len = 1; advance(l); return token;
-      case '>': token.kind = TOKEN_GT;        token.text_len = 1; advance(l); return token;
-      case '.': token.kind = TOKEN_DOT;       token.text_len = 1; advance(l); return token;
-      case '=': 
-          advance(l); 
-          if (peek(l) == '=') {
-              advance(l); 
-              token.kind = TOKEN_EQEQ;
-              token.text_len = 2;
-          } else {
-              token.kind = TOKEN_EQUALS;
-              token.text_len = 1;
-          }
-          return token;
-      
+  switch (c)
+  {
+
+  case '#':
+    SINGLE(TOKEN_HASH);
+  case '(':
+    SINGLE(TOKEN_LPAREN);
+  case ')':
+    SINGLE(TOKEN_RPAREN);
+  case '{':
+    SINGLE(TOKEN_LBRACE);
+  case '}':
+    SINGLE(TOKEN_RBRACE);
+  case ';':
+    SINGLE(TOKEN_SEMICOLON);
+  case ',':
+    SINGLE(TOKEN_COMMA);
+  case '.':
+    SINGLE(TOKEN_DOT);
+  case '~':
+    SINGLE(TOKEN_TILDE);
+
+  case '=':
+    if (next == '=')
+    {
+      DOUBLE(TOKEN_EQEQ);
+    }
+    SINGLE(TOKEN_EQUALS);
+
+  case '!':
+    if (next == '=')
+    {
+      DOUBLE(TOKEN_BANGEQ);
+    }
+    SINGLE(TOKEN_BANG);
+
+  case '+':
+    if (next == '+')
+    {
+      DOUBLE(TOKEN_PLUSPLUS);
+    }
+    if (next == '=')
+    {
+      DOUBLE(TOKEN_PLUSEQ);
+    }
+    SINGLE(TOKEN_PLUS);
+
+  case '-':
+    if (next == '-')
+    {
+      DOUBLE(TOKEN_MINUSMINUS);
+    }
+    if (next == '=')
+    {
+      DOUBLE(TOKEN_MINUSEQ);
+    }
+    if (next == '>')
+    {
+      DOUBLE(TOKEN_ARROW);
+    }
+    SINGLE(TOKEN_MINUS);
+
+  case '*':
+    if (next == '=')
+    {
+      DOUBLE(TOKEN_STAREQ);
+    }
+    SINGLE(TOKEN_STAR);
+
+  case '/':
+    if (next == '=')
+    {
+      DOUBLE(TOKEN_SLASHEQ);
+    }
+    SINGLE(TOKEN_SLASH);
+
+  case '%':
+    if (next == '=')
+    {
+      DOUBLE(TOKEN_PERCENTEQ);
+    }
+    SINGLE(TOKEN_PERCENT);
+
+  case '&':
+    if (next == '&')
+    {
+      DOUBLE(TOKEN_AMPAMP);
+    }
+    if (next == '=')
+    {
+      DOUBLE(TOKEN_AMPEQ);
+    }
+    SINGLE(TOKEN_AMP);
+
+  case '|':
+    if (next == '|')
+    {
+      DOUBLE(TOKEN_PIPEPIPE);
+    }
+    if (next == '=')
+    {
+      DOUBLE(TOKEN_PIPEEQ);
+    }
+    SINGLE(TOKEN_PIPE);
+
+  case '^':
+    if (next == '=')
+    {
+      DOUBLE(TOKEN_CARETEQ);
+    }
+    SINGLE(TOKEN_CARET);
+
+  case '<':
+    if (next == '<')
+    {
+      /* peek two ahead for '=' */
+      if (l->cursor + 2 < l->content_len &&
+          l->content[l->cursor + 2] == '=')
+      {
+        TRIPLE(TOKEN_LSHIFTEQ);
+      }
+      DOUBLE(TOKEN_LSHIFT);
+    }
+    if (next == '=')
+    {
+      DOUBLE(TOKEN_LTEQ);
+    }
+    SINGLE(TOKEN_LT);
+
+  case '>':
+    if (next == '>')
+    {
+      if (l->cursor + 2 < l->content_len &&
+          l->content[l->cursor + 2] == '=')
+      {
+        TRIPLE(TOKEN_RSHIFTEQ);
+      }
+      DOUBLE(TOKEN_RSHIFT);
+    }
+    if (next == '=')
+    {
+      DOUBLE(TOKEN_GTEQ);
+    }
+    SINGLE(TOKEN_GT);
   }
 
-  if(isdigit((unsigned char) c)) {
+#undef SINGLE
+#undef DOUBLE
+#undef TRIPLE
+
+  if (isdigit((unsigned char)c))
+  {
+    size_t start_cursor = l->cursor;
     token.kind = TOKEN_NUMBER;
-    size_t start_cursor = l->cursor;
 
-    while(isdigit((unsigned char) peek(l))) {
+    while (isdigit((unsigned char)peek(l)))
+    {
       advance(l);
     }
-
     token.text_len = l->cursor - start_cursor;
     return token;
   }
 
-  if(c == '"') {
-    token.kind = TOKEN_STRING;
+  if (c == '"')
+  {
     advance(l);
-
     size_t start_cursor = l->cursor;
+    token.kind = TOKEN_STRING;
 
-    while(peek(l) != '"' && peek(l) != '\0') {
+    while (peek(l) != '"' && peek(l) != '\0')
+    {
+      if (peek(l) == '\\')
+        advance(l);
       advance(l);
     }
 
-    token.text_len = l->cursor - start_cursor;
     token.text = &l->content[start_cursor];
+    token.text_len = l->cursor - start_cursor;
 
-    if(peek(l) == '"') {
+    if (peek(l) == '"')
+    {
       advance(l);
     }
     return token;
   }
 
-
-  if(isalpha((unsigned char)c) || c == '_') {
-    token.kind = TOKEN_SYMBOL;
+  if (isalpha((unsigned char)c) || c == '_')
+  {
     size_t start_cursor = l->cursor;
+    token.kind = TOKEN_SYMBOL;
 
-    while(isalnum((unsigned char)peek(l)) || peek(l) == '_'){
+    while (isalnum((unsigned char)peek(l)) || peek(l) == '_')
+    {
       advance(l);
     }
     token.text_len = l->cursor - start_cursor;
