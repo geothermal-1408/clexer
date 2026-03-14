@@ -19,7 +19,7 @@ build() {
 }
 
 test() {
-    $CC $CFLAGS -o usage usage.c -L. -llexer
+    $CC $CFLAGS -o bin/usage usage.c -L. -llexer
 }
 
 case "$1" in
