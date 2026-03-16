@@ -101,5 +101,6 @@ typedef struct {
 
 Lexer lexer_new(const char *content, size_t content_len);
 Token lexer_next(Lexer *l);
+const char *token_kind_str(Token_kind kind);
 
 #endif //LEXER_H

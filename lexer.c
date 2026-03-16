@@ -420,3 +420,59 @@ Token lexer_next(Lexer *l)
   advance(l);
   return token;
 }
+
+const char *token_kind_str(Token_kind kind)
+{
+    switch (kind) {
+        case TOKEN_END:         return "EOF";
+        case TOKEN_INVALID:     return "INVALID";
+        case TOKEN_HASH:        return "'#'";
+        case TOKEN_SYMBOL:      return "identifier";
+        case TOKEN_KEYWORD:     return "keyword";
+        case TOKEN_NUMBER:      return "number";
+        case TOKEN_STRING:      return "string";
+        case TOKEN_LPAREN:      return "'('";
+        case TOKEN_RPAREN:      return "')'";
+        case TOKEN_LBRACE:      return "'{'";
+        case TOKEN_RBRACE:      return "'}'";
+        case TOKEN_SEMICOLON:   return "';'";
+        case TOKEN_COMMA:       return "','";
+        case TOKEN_DOT:         return "'.'";
+        case TOKEN_LT:          return "'<'";
+        case TOKEN_GT:          return "'>'";
+        case TOKEN_LTEQ:        return "'<='";
+        case TOKEN_GTEQ:        return "'>='";
+        case TOKEN_EQEQ:        return "'=='";
+        case TOKEN_BANGEQ:      return "'!='";
+        case TOKEN_EQUALS:      return "'='";
+        case TOKEN_PLUSEQ:      return "'+='";
+        case TOKEN_MINUSEQ:     return "'-='";
+        case TOKEN_STAREQ:      return "'*='";
+        case TOKEN_SLASHEQ:     return "'/='";
+        case TOKEN_PERCENTEQ:   return "'%='";
+        case TOKEN_AMPEQ:       return "'&='";
+        case TOKEN_PIPEEQ:      return "'|='";
+        case TOKEN_CARETEQ:     return "'^='";
+        case TOKEN_LSHIFTEQ:    return "'<<='";
+        case TOKEN_RSHIFTEQ:    return "'>>='";
+        case TOKEN_PLUS:        return "'+'";
+        case TOKEN_MINUS:       return "'-'";
+        case TOKEN_STAR:        return "'*'";
+        case TOKEN_SLASH:       return "'/'";
+        case TOKEN_PERCENT:     return "'%'";
+        case TOKEN_PLUSPLUS:    return "'++'";
+        case TOKEN_MINUSMINUS:  return "'--'";
+        case TOKEN_AMP:         return "'&'";
+        case TOKEN_PIPE:        return "'|'";
+        case TOKEN_CARET:       return "'^'";
+        case TOKEN_TILDE:       return "'~'";
+        case TOKEN_LSHIFT:      return "'<<'";
+        case TOKEN_RSHIFT:      return "'>>'";
+        case TOKEN_AMPAMP:      return "'&&'";
+        case TOKEN_PIPEPIPE:    return "'||'";
+        case TOKEN_BANG:        return "'!'";
+        case TOKEN_ARROW:       return "'->'";
+    }
+    return "unknown";
+}
+
