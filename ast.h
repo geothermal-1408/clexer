@@ -5,6 +5,18 @@
 #include "lexer.h"
 
 typedef enum {
+  TYPE_INT,
+  TYPE_CHAR,
+  TYPE_VOID,
+}TypeKind;
+
+typedef struct {
+  TypeKind kind;
+  Token token;
+} Type;
+
+
+typedef enum {
   NODE_PROGRAM,
   NODE_FUNC_DEF,
   NODE_PARAM,
@@ -12,9 +24,11 @@ typedef enum {
   NODE_VAR_DECL,
   NODE_RETURN,
   NODE_IF,
+  NODE_WHILE,
   NODE_ASSIGN,
   NODE_BINARY,
   NODE_UNARY,
+  NODE_CALL,
   NODE_NUMBER,
   NODE_SYMBOL,
 } NodeKind;
@@ -57,7 +71,13 @@ typedef struct {
 typedef struct {
   AstNode *condition;
   AstNode *then_block;
+  AstNode *else_block;
 } If;
+
+typedef struct {
+  AstNode *condition;
+  AstNode *body;
+} While;
 
 typedef struct {
   Token    name;
@@ -75,6 +95,11 @@ typedef struct {
   AstNode *operand;
 } Unary;
 
+typedef struct {
+  Token callee;
+  NodeList args;
+} Call;
+
 /*--  --*/
 
 struct AstNode {
@@ -89,18 +114,18 @@ struct AstNode {
     VarDecl var_decl;
     Return ret;
     If if_stmt;
+    While while_stmt;
     Assign assign;
     Binary binary;
     Unary unary;
+    Call call;
   };
 };
 
 AstNode *astnode_alloc(NodeKind kind, Token token);
-
 void node_list_push(NodeList *list, AstNode *node);
-
 void ast_free(AstNode *node);
-
 void ast_print(const AstNode *node, int indent);
+const char *type_kind_str(TypeKind kind);
 
 #endif //AST_H

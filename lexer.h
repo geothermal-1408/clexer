@@ -8,6 +8,8 @@ typedef enum {
   KW_INT,
   KW_RETURN, 
   KW_IF,
+  KW_ELSE,
+  KW_WHILE
 } Keyword_kind;
 
 typedef enum {

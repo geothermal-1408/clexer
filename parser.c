@@ -9,6 +9,7 @@ static AstNode *parse_statement(Parser *p);
 static AstNode *parse_var_decl(Parser *p);
 static AstNode *parse_return(Parser *p);
 static AstNode *parse_if(Parser *p);
+static AstNode *parse_while(Parser *p);
 static AstNode *parse_expr(Parser *p, int min_bp);
 static AstNode *parse_primary(Parser *p);
 
@@ -16,8 +17,8 @@ static AstNode *parse_primary(Parser *p);
 static void error(Parser *p, const char *msg)
 {
   if(p->has_error) return;
-  fprintf(stderr, "[ERROR]%zu %zu: %s",
-	  p->current.line, p->current.col, msg);
+  fprintf(stderr, "[ERROR] %s:%zu: %s",
+	  __FILE__, p->current.line, msg);
 
   if(p->current.text_len > 0)
     fprintf(stderr, "(got '%.*s')",
@@ -95,6 +96,24 @@ static AstNode *parse_primary(Parser *p)
 
   if(t.kind == TOKEN_SYMBOL) {
     advance(p);
+
+    if(p->current.kind == TOKEN_LPAREN) {
+      advance(p);
+
+      AstNode *node = astnode_alloc(NODE_CALL, t);
+      node->call.callee = t;
+
+      while(p->current.kind != TOKEN_RPAREN &&
+	    p->current.kind != TOKEN_END &&
+	    !p->has_error) {
+	AstNode *arg = parse_expr(p, 0);
+	if(arg) node_list_push(&node->call.args, arg);
+	if(!match(p, TOKEN_COMMA)) break;
+      }
+
+      expect(p, TOKEN_RPAREN, "function call");
+      return node;
+    }
     return astnode_alloc(NODE_SYMBOL, t);
   }
 
@@ -184,11 +203,39 @@ static AstNode *parse_if(Parser *p)
   expect(p, TOKEN_LPAREN, "if condition");
   AstNode *cond = parse_expr(p, 0);
   expect(p, TOKEN_RPAREN, "if condition");
-  AstNode *body = parse_block(p);
-
+  AstNode *then_block = parse_block(p);
+  
   AstNode *node = astnode_alloc(NODE_IF, kw);
   node->if_stmt.condition = cond;
-  node->if_stmt.then_block = body;
+  node->if_stmt.then_block = then_block;
+  node->if_stmt.else_block = NULL;
+
+  //else if condition
+  if(p->current.kind == TOKEN_KEYWORD && p->current.kw_kind == KW_ELSE) {
+    advance(p);
+
+    if(p->current.kind == TOKEN_KEYWORD && p->current.kw_kind == KW_IF) {
+      node->if_stmt.else_block = parse_if(p);
+    } else {
+      node->if_stmt.else_block = parse_block(p);
+    }
+  }
+  return node;
+}
+
+static AstNode *parse_while(Parser *p)
+{
+  Token kw = p->current;
+  advance(p);
+
+  expect(p, TOKEN_LPAREN, "while condition");
+  AstNode *cond = parse_expr(p, 0);
+  expect(p, TOKEN_RPAREN, "while condition");
+  AstNode *body = parse_block(p);
+
+  AstNode *node= astnode_alloc(NODE_WHILE, kw);
+  node->while_stmt.condition	= cond;
+  node->while_stmt.body		= body;
   return node;
 }
 
@@ -204,13 +251,16 @@ static AstNode *parse_statement(Parser *p)
     
   if(t.kind == TOKEN_KEYWORD && t.kw_kind == KW_IF)
     return parse_if(p);
+  
+  if(t.kind == TOKEN_KEYWORD && t.kw_kind == KW_WHILE)
+    return parse_while(p);
+
 
   if(t.kind == TOKEN_SYMBOL) {
     Lexer saved = p->lexer;
     Token peeked = lexer_next(&p->lexer);
 
     if(peeked.kind == TOKEN_EQUALS) {
-      advance(p);
       advance(p);
       AstNode *val = parse_expr(p, 0);
       expect(p, TOKEN_SEMICOLON, "assignment");
@@ -238,7 +288,7 @@ static AstNode *parse_block(Parser *p)
     AstNode *stmt = parse_statement(p);
     if(stmt) {
       if(node->block.count >= node->block.capacity) {
-	size_t new_cap = node->block.capacity == 0 ? 8 : node->block.capacity;
+	size_t new_cap = node->block.capacity == 0 ? 8 : node->block.capacity * 2;
 	node->block.stmts = realloc(node->block.stmts, new_cap * sizeof(AstNode *));
 	node->block.capacity = new_cap;
 	
@@ -325,7 +375,7 @@ AstNode *parser_parse(Parser *p)
 	continue;
       }
     }
-  error(p, "excepeted a function defination at top level");
+  error(p, "expected a function defination at top level");
   advance(p);
   }
 

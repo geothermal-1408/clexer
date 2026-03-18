@@ -82,6 +82,8 @@ static void init_keyword_table(void)
   insert_keyword("int", KW_INT);
   insert_keyword("return", KW_RETURN);
   insert_keyword("if", KW_IF);
+  insert_keyword("else", KW_ELSE);
+  insert_keyword("while", KW_WHILE);
 
   keyword_table_init = 1;
 }
