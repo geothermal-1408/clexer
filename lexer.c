@@ -80,6 +80,8 @@ static void init_keyword_table(void)
     return;
 
   insert_keyword("int", KW_INT);
+  insert_keyword("void", KW_VOID);
+  insert_keyword("char", KW_CHAR);
   insert_keyword("return", KW_RETURN);
   insert_keyword("if", KW_IF);
   insert_keyword("else", KW_ELSE);

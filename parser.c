@@ -6,7 +6,7 @@
 static AstNode *parse_func_def(Parser *p);
 static AstNode *parse_block(Parser *p);
 static AstNode *parse_statement(Parser *p);
-static AstNode *parse_var_decl(Parser *p);
+static AstNode *parse_var_decl(Parser *p, Type type);
 static AstNode *parse_return(Parser *p);
 static AstNode *parse_if(Parser *p);
 static AstNode *parse_while(Parser *p);
@@ -83,6 +83,32 @@ static BindingPower infix_op(Token_kind kind)
   default:
     return (BindingPower) {-1, -1};
   }
+}
+
+static int is_type_kw(const Token *t)
+{
+  if(t->kind != TOKEN_KEYWORD) return 0;
+  return t->kw_kind == KW_INT   ||
+	  t->kw_kind == KW_CHAR ||
+	  t->kw_kind == KW_VOID ;
+}
+
+static Type parse_type(Parser *p)
+{
+  Type ty;
+  ty.token = p->current;
+
+  switch(p->current.kw_kind) {
+  case KW_INT: ty.kind =  TYPE_INT;  break;
+  case KW_CHAR: ty.kind = TYPE_CHAR; break;
+  case KW_VOID: ty.kind = TYPE_VOID; break;
+  default:
+    error(p, "expected type keyword");
+    ty.kind = TYPE_INT; //recover
+    break;
+  }
+  advance(p);
+  return ty;
 }
 
 static AstNode *parse_primary(Parser *p)
@@ -163,13 +189,12 @@ static AstNode *parse_expr(Parser *p, int min_bp)
   return left;
 }
 
-static AstNode *parse_var_decl(Parser *p)
+static AstNode *parse_var_decl(Parser *p, Type type)
 {
-  Token kw = p->current;
-  advance(p);
-
   Token name = expect(p, TOKEN_SYMBOL, "variable declaration");
-  AstNode *node = astnode_alloc(NODE_VAR_DECL, kw);
+  AstNode *node = astnode_alloc(NODE_VAR_DECL, name);
+  
+  node->var_decl.type = type;
   node->var_decl.name = name;
   node->var_decl.init = NULL;
 
@@ -243,9 +268,11 @@ static AstNode *parse_statement(Parser *p)
 {
   Token t = p->current;
 
-  if(t.kind == TOKEN_KEYWORD && t.kw_kind == KW_INT)
-    return parse_var_decl(p);
-
+  if(is_type_kw(&t)) {
+    Type type = parse_type(p);
+    return parse_var_decl(p, type);
+  }
+  
   if(t.kind == TOKEN_KEYWORD && t.kw_kind == KW_RETURN)
     return parse_return(p);
     
@@ -305,27 +332,28 @@ static AstNode *parse_block(Parser *p)
 
 static AstNode *parse_func_def(Parser *p)
 {
-  Token kw = p->current;
-  advance(p);
 
+  Type return_type = parse_type(p);
   Token name = expect(p, TOKEN_SYMBOL, "function name");
   AstNode *node = astnode_alloc(NODE_FUNC_DEF, name);
+  node->func_def.return_type = return_type;
   node->func_def.name = name;
 
   expect(p, TOKEN_LPAREN, "function parameters");
 
   while(p->current.kind != TOKEN_RPAREN &&
 	p->current.kind != TOKEN_END &&
-	!p->has_error) {
-    if(!(p->current.kind == TOKEN_KEYWORD &&
-	 p->current.kw_kind == KW_INT)) {
-      error(p, "expected int");
+	!p->has_error)
+    {
+    if(!is_type_kw(&p->current)) {
+      error(p, "expected a type before param name");
       break;
     }
-    advance(p);
 
+    Type param_type = parse_type(p);
     Token param_name = expect(p, TOKEN_SYMBOL, "parameter name");
     AstNode *param = astnode_alloc(NODE_PARAM, param_name);
+    param->param.type = param_type;
     param->param.name = param_name;
     node_list_push(&node->func_def.params, param);
     
@@ -335,8 +363,6 @@ static AstNode *parse_func_def(Parser *p)
 
   expect(p, TOKEN_RPAREN, "function parameter");
   node->func_def.body = parse_block(p);
-
-  (void)kw;
 
   return node;
 }
@@ -355,7 +381,7 @@ AstNode *parser_parse(Parser *p)
   AstNode *root = astnode_alloc(NODE_PROGRAM, dummy);
 
   while(p->current.kind != TOKEN_END && !p->has_error) {
-    if(p->current.kind == TOKEN_KEYWORD && p->current.kw_kind == KW_INT) {
+    if(is_type_kw(&p->current)) {
       Lexer saved = p->lexer;
       Token saved_cur = p->current;
 

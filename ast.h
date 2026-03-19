@@ -44,12 +44,14 @@ typedef struct {
 } NodeList;
 
 typedef struct {
+  Type return_type;
   Token name;
   NodeList params;
   AstNode *body;
 } FuncDef;
 
 typedef struct {
+  Type type;
   Token name;
 } Param;
 
@@ -60,6 +62,7 @@ typedef struct {
 } Block;
 
 typedef struct {
+  Type     type;
   Token    name;
   AstNode *init;
 } VarDecl;

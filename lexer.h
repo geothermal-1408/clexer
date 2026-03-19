@@ -6,6 +6,8 @@
 typedef enum {
   KW_NONE = 0,
   KW_INT,
+  KW_CHAR,
+  KW_VOID,
   KW_RETURN, 
   KW_IF,
   KW_ELSE,
