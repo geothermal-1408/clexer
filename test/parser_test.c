@@ -408,7 +408,129 @@ static void test_expr(void)
     }
 }
 
-/* ── suite registry ──────────────────────────────────────────────────────── */
+static void test_types(void)
+{
+    printf("\n[types] — multiple types (int, char, void)\n");
+
+    /* int return type */
+    {
+        const char *src = "int f() { return 1; }";
+        AstNode *ast = parse_and_check(src, 1);
+        AstNode *fn  = ast ? ast->program.items[0] : NULL;
+        CHECK("int return: NODE_FUNC_DEF",       fn && fn->kind == NODE_FUNC_DEF);
+        CHECK("int return: return type is int",
+              fn && fn->func_def.return_type.kind == TYPE_INT);
+        ast_free(ast);
+    }
+
+    /* void return type */
+    {
+        const char *src = "void f() { return; }";
+        AstNode *ast = parse_and_check(src, 1);
+        AstNode *fn  = ast ? ast->program.items[0] : NULL;
+        CHECK("void return: return type is void",
+              fn && fn->func_def.return_type.kind == TYPE_VOID);
+        /* bare return must have NULL value */
+        AstNode *ret = func_body_stmt(ast, 0, 0);
+        CHECK("void return: ret value is NULL",  ret && ret->ret.value == NULL);
+        ast_free(ast);
+    }
+
+    /* char return type */
+    {
+        const char *src = "char f() { return 65; }";
+        AstNode *ast = parse_and_check(src, 1);
+        AstNode *fn  = ast ? ast->program.items[0] : NULL;
+        CHECK("char return: return type is char",
+              fn && fn->func_def.return_type.kind == TYPE_CHAR);
+        ast_free(ast);
+    }
+
+    /* int param */
+    {
+        const char *src = "int f(int a) { return a; }";
+        AstNode *ast = parse_and_check(src, 1);
+        AstNode *fn  = ast ? ast->program.items[0] : NULL;
+        AstNode *p0  = fn  ? fn->func_def.params.items[0] : NULL;
+        CHECK("int param: NODE_PARAM",         p0 && p0->kind == NODE_PARAM);
+        CHECK("int param: type is int",        p0 && p0->param.type.kind == TYPE_INT);
+        ast_free(ast);
+    }
+
+    /* char param */
+    {
+        const char *src = "int f(char c) { return c; }";
+        AstNode *ast = parse_and_check(src, 1);
+        AstNode *fn  = ast ? ast->program.items[0] : NULL;
+        AstNode *p0  = fn  ? fn->func_def.params.items[0] : NULL;
+        CHECK("char param: type is char",      p0 && p0->param.type.kind == TYPE_CHAR);
+        ast_free(ast);
+    }
+
+    /* mixed params */
+    {
+        const char *src = "int f(int a, char b) { return a; }";
+        AstNode *ast = parse_and_check(src, 1);
+        AstNode *fn  = ast ? ast->program.items[0] : NULL;
+        AstNode *p0  = fn  ? fn->func_def.params.items[0] : NULL;
+        AstNode *p1  = fn  ? fn->func_def.params.items[1] : NULL;
+        CHECK("mixed params: param0 is int",   p0 && p0->param.type.kind == TYPE_INT);
+        CHECK("mixed params: param1 is char",  p1 && p1->param.type.kind == TYPE_CHAR);
+        ast_free(ast);
+    }
+
+    /* int var decl */
+    {
+        const char *src = "int f() { int x = 1; return x; }";
+        AstNode *ast  = parse_and_check(src, 1);
+        AstNode *stmt = func_body_stmt(ast, 0, 0);
+        CHECK("int var: NODE_VAR_DECL",        stmt && stmt->kind == NODE_VAR_DECL);
+        CHECK("int var: type is int",          stmt && stmt->var_decl.type.kind == TYPE_INT);
+        ast_free(ast);
+    }
+
+    /* char var decl */
+    {
+        const char *src = "int f() { char c = 65; return c; }";
+        AstNode *ast  = parse_and_check(src, 1);
+        AstNode *stmt = func_body_stmt(ast, 0, 0);
+        CHECK("char var: NODE_VAR_DECL",       stmt && stmt->kind == NODE_VAR_DECL);
+        CHECK("char var: type is char",        stmt && stmt->var_decl.type.kind == TYPE_CHAR);
+        ast_free(ast);
+    }
+
+    /* void function with no return value */
+    {
+        const char *src =
+            "void greet(int x) {\n"
+            "    x = x + 1;\n"
+            "}\n";
+        AstNode *ast = parse_and_check(src, 1);
+        AstNode *fn  = ast ? ast->program.items[0] : NULL;
+        CHECK("void func: return type is void",
+              fn && fn->func_def.return_type.kind == TYPE_VOID);
+        CHECK("void func: body has 1 stmt",
+              fn && fn->func_def.body->block.count == 1);
+        ast_free(ast);
+    }
+
+    /* multiple functions with different return types */
+    {
+        const char *src =
+            "int  getInt()  { return 1; }\n"
+            "char getChar() { return 65; }\n"
+            "void doWork()  { return; }\n";
+        AstNode *ast = parse_and_check(src, 1);
+        CHECK("multi-type funcs: 3 decls",     ast && ast->program.count == 3);
+        AstNode *f0 = ast ? ast->program.items[0] : NULL;
+        AstNode *f1 = ast ? ast->program.items[1] : NULL;
+        AstNode *f2 = ast ? ast->program.items[2] : NULL;
+        CHECK("multi-type funcs: f0 is int",   f0 && f0->func_def.return_type.kind == TYPE_INT);
+        CHECK("multi-type funcs: f1 is char",  f1 && f1->func_def.return_type.kind == TYPE_CHAR);
+        CHECK("multi-type funcs: f2 is void",  f2 && f2->func_def.return_type.kind == TYPE_VOID);
+        ast_free(ast);
+    }
+}
 
 typedef struct {
     const char *name;
@@ -425,6 +547,7 @@ static Suite suites[] = {
     { "--while",  test_while,  "while loops"              },
     { "--call",   test_call,   "function call expressions"},
     { "--expr",   test_expr,   "expression precedence"    },
+    { "--types", test_types, "int / char / void types" },
 };
 
 #define SUITE_COUNT (sizeof suites / sizeof *suites)
