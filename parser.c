@@ -12,6 +12,8 @@ static AstNode *parse_if(Parser *p);
 static AstNode *parse_while(Parser *p);
 static AstNode *parse_expr(Parser *p, int min_bp);
 static AstNode *parse_primary(Parser *p);
+static int is_type_kw(const Token *t);
+static Type parse_type(Parser *p);
 
 
 static void error(Parser *p, const char *msg)
@@ -30,7 +32,14 @@ static void error(Parser *p, const char *msg)
 
 static void advance(Parser *p)
 {
-  p->current = lexer_next(&p->lexer);
+  if(p->use_stream) {
+    if (p->ts_index + 1 < p->ts->count)
+      p->current = p->ts->tokens[++p->ts_index];
+    else
+      p->current = (Token){ .kind = TOKEN_END };
+  } else {
+    p->current = lexer_next(&p->lexer);
+  }
 }
 
 static int match(Parser *p, Token_kind kind)
@@ -115,11 +124,14 @@ static AstNode *parse_primary(Parser *p)
 {
   Token t = p->current;
 
-  if (t.kind == TOKEN_NUMBER) {
+  if (t.kind == TOKEN_NUMBER || t.kind == TOKEN_STRING || t.kind == TOKEN_CHAR) {
     advance(p);
-    return astnode_alloc(NODE_NUMBER, t);
+    NodeKind k = (t.kind == TOKEN_NUMBER) ? NODE_NUMBER :
+                 (t.kind == TOKEN_STRING) ? NODE_STRING :
+                                            NODE_CHAR_LIT;
+    return astnode_alloc(k, t);
   }
-
+  
   if(t.kind == TOKEN_SYMBOL) {
     advance(p);
 
@@ -367,11 +379,22 @@ static AstNode *parse_func_def(Parser *p)
   return node;
 }
 
+Parser parser_from_stream(TokenStream *ts)
+{
+    Parser p     = {0};
+    p.use_stream = 1;
+    p.ts         = ts;
+    p.ts_index   = 0;
+    p.current    = ts->count > 0 ? ts->tokens[0] : (Token){0};
+    return p;
+}
+
 Parser parser_new(const char *src, size_t src_len)
 {
-  Parser p	= {0};
-  p.lexer	= lexer_new(src, src_len);
-  p.current	= lexer_next(&p.lexer);
+  Parser p        = {0};
+  p.use_stream	  = 0;
+  p.lexer	  = lexer_new(src, src_len);
+  p.current	  = lexer_next(&p.lexer);
   return p;
 }
 
@@ -381,19 +404,27 @@ AstNode *parser_parse(Parser *p)
   AstNode *root = astnode_alloc(NODE_PROGRAM, dummy);
 
   while(p->current.kind != TOKEN_END && !p->has_error) {
+
+    if(!p->use_stream && p->current.kind == TOKEN_HASH) {
+      size_t line = p->current.line;
+      while(p->current.kind != TOKEN_END &&
+	    p->current.line == line) {
+	advance(p);
+      }
+      continue;
+    }
     if(is_type_kw(&p->current)) {
-      Lexer saved = p->lexer;
-      Token saved_cur = p->current;
+      Lexer	saved_lexer = p->lexer;
+      Token	saved_cur   = p->current;
+      size_t	saved_index = p->ts_index;
 
       advance(p);
-      Token name_tok = p->current;
       advance(p);
       int is_func = (p->current.kind == TOKEN_LPAREN);
 
-      p->lexer = saved;
-      p->current = saved_cur;
-
-      (void)name_tok;
+      p->lexer	  = saved_lexer;
+      p->current  = saved_cur;
+      p->ts_index = saved_index;
 
       if(is_func) {
 	AstNode *fn = parse_func_def(p);

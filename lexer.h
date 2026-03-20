@@ -24,6 +24,7 @@ typedef enum {
   TOKEN_KEYWORD,
   TOKEN_NUMBER,
   TOKEN_STRING,
+  TOKEN_CHAR,
 
   /* assignment */
   TOKEN_EQUALS,   

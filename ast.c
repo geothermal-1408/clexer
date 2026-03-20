@@ -57,11 +57,6 @@ void ast_free(AstNode *node)
     free(node->call.args.items);
     break;
     
-  case NODE_PARAM:
-    printf("Param '%.*s'\n",
-	   (int)node->token.text_len, node->token.text);
-    break;
-    
   case NODE_BLOCK:
     for(size_t i = 0; i < node->block.count; ++i) {
       ast_free(node->block.stmts[i]);
@@ -76,7 +71,11 @@ void ast_free(AstNode *node)
   case NODE_RETURN:
     ast_free(node->ret.value);
     break;
-
+    
+  case NODE_STRING:
+  case NODE_CHAR_LIT:
+    break;
+    
   case NODE_IF:
     ast_free(node->if_stmt.condition);
     ast_free(node->if_stmt.then_block);
@@ -101,14 +100,9 @@ void ast_free(AstNode *node)
     ast_free(node->unary.operand);
     break;
 
-  case NODE_NUMBER:
-    printf("Number '%.*s'\n",
-	   (int)node->token.text_len, node->token.text);
-    break;
-    
+  case NODE_PARAM:
+  case NODE_NUMBER:    
   case NODE_SYMBOL:
-    printf("Symbol '%.*s'\n",
-	   (int)node->token.text_len, node->token.text);
     break;
   }
   free(node); 
@@ -135,7 +129,7 @@ static const char *map_node_str(NodeKind n)
         case NODE_PROGRAM:  return "Program";
         case NODE_FUNC_DEF: return "FuncDef";
         case NODE_PARAM:    return "Param";
-        case NODE_CALL:    return "Call";
+        case NODE_CALL:     return "Call";
         case NODE_BLOCK:    return "Block";
         case NODE_VAR_DECL: return "VarDecl";
         case NODE_RETURN:   return "Return";
@@ -145,6 +139,8 @@ static const char *map_node_str(NodeKind n)
         case NODE_BINARY:   return "Binary";
         case NODE_UNARY:    return "Unary";
         case NODE_NUMBER:   return "Number";
+        case NODE_STRING:   return "String";
+        case NODE_CHAR_LIT: return "CharLit";
         case NODE_SYMBOL:   return "Symbol";
     }
 }
@@ -186,7 +182,7 @@ void ast_print(const AstNode *node, int depth)
     break;
 
   case NODE_FUNC_DEF:
-    printf("funcDef '%.*s' (%zu params)\n", (int)node->token.text_len, node->token.text, node->func_def.params.count);
+    printf("FuncDef '%.*s' (%zu params)\n", (int)node->token.text_len, node->token.text, node->func_def.params.count);
     for(size_t i = 0; i < node->func_def.params.count; ++i) {
       ast_print(node->func_def.params.items[i], depth+1);
     }
@@ -204,8 +200,8 @@ void ast_print(const AstNode *node, int depth)
     break;
 
   case NODE_BLOCK:
-    printf("Param (%d stmts)\n", (int)node->block.count);
-    for(size_t i = 0; i< node->block.count; ++i) {
+    printf("Block (%zu stmts)\n", node->block.count);
+    for(size_t i = 0; i < node->block.count; ++i) {
       ast_print(node->block.stmts[i], depth + 1);
     }
     break;
@@ -222,6 +218,14 @@ void ast_print(const AstNode *node, int depth)
   case NODE_RETURN:
     printf("Return\n");
     ast_print(node->ret.value, depth + 1);
+    break;
+
+  case NODE_STRING:
+    printf("String \"%.*s\"\n", (int)node->token.text_len, node->token.text);
+    break;
+    
+  case NODE_CHAR_LIT:
+    printf("CharLit '%.*s'\n", (int)node->token.text_len, node->token.text);
     break;
 
   case NODE_IF:

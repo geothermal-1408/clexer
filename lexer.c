@@ -38,6 +38,22 @@
     return token;       \
   } while (0)
 
+#define LEX_LITERAL(delim, tok_kind)		  	\
+  do							\
+    {						  	\
+    advance(l);					  	\
+    size_t start_cursor = l->cursor;		  	\
+    token.kind = (tok_kind);			  	\
+    while(peek(l) != (delim) && peek(l) != '\0') {  	\
+      if (peek(l) == '\\') advance(l);		  	\
+      advance(l);					\
+    }						  	\
+    token.text = &l->content[start_cursor];	  	\
+    token.text_len = l->cursor - start_cursor;	  	\
+    if(peek(l) == (delim)) advance(l);			\
+    return token;					\
+  } while(0)						\
+     
 typedef struct
 {
   const char *text;
@@ -381,29 +397,14 @@ Token lexer_next(Lexer *l)
     return token;
   }
 
-  if (c == '"')
-  {
-    advance(l);
-    size_t start_cursor = l->cursor;
-    token.kind = TOKEN_STRING;
-
-    while (peek(l) != '"' && peek(l) != '\0')
-    {
-      if (peek(l) == '\\')
-        advance(l);
-      advance(l);
-    }
-
-    token.text = &l->content[start_cursor];
-    token.text_len = l->cursor - start_cursor;
-
-    if (peek(l) == '"')
-    {
-      advance(l);
-    }
-    return token;
+  if (c == '"') {
+    LEX_LITERAL('"', TOKEN_STRING);
   }
 
+  if(c == '\'') {
+    LEX_LITERAL('\'', TOKEN_CHAR);
+  }
+  
   if (isalpha((unsigned char)c) || c == '_')
   {
     size_t start_cursor = l->cursor;
@@ -425,6 +426,10 @@ Token lexer_next(Lexer *l)
   return token;
 }
 
+#undef LEX_LITERAL
+
+// this looks disgusting maybe use table/KV pair to manage this.
+
 const char *token_kind_str(Token_kind kind)
 {
     switch (kind) {
@@ -435,6 +440,7 @@ const char *token_kind_str(Token_kind kind)
         case TOKEN_KEYWORD:     return "keyword";
         case TOKEN_NUMBER:      return "number";
         case TOKEN_STRING:      return "string";
+        case TOKEN_CHAR:        return "character";
         case TOKEN_LPAREN:      return "'('";
         case TOKEN_RPAREN:      return "')'";
         case TOKEN_LBRACE:      return "'{'";

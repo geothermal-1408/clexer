@@ -30,6 +30,8 @@ typedef enum {
   NODE_UNARY,
   NODE_CALL,
   NODE_NUMBER,
+  NODE_STRING,
+  NODE_CHAR_LIT,
   NODE_SYMBOL,
 } NodeKind;
 
