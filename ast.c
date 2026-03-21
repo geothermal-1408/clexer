@@ -67,7 +67,12 @@ void ast_free(AstNode *node)
   case NODE_VAR_DECL:
     ast_free(node->var_decl.init);
     break;
-
+    
+  case NODE_SUBSCRIPT:
+    ast_free(node->subscript.array);
+    ast_free(node->subscript.index);
+    break;
+    
   case NODE_RETURN:
     ast_free(node->ret.value);
     break;
@@ -132,6 +137,7 @@ static const char *map_node_str(NodeKind n)
         case NODE_CALL:     return "Call";
         case NODE_BLOCK:    return "Block";
         case NODE_VAR_DECL: return "VarDecl";
+        case NODE_SUBSCRIPT:return "Subscript";
         case NODE_RETURN:   return "Return";
         case NODE_IF:       return "If";
         case NODE_WHILE:    return "While";
@@ -163,6 +169,7 @@ static const char *map_op_str(Token_kind n)
         case TOKEN_PIPEPIPE:return "||";
         case TOKEN_BANG:    return "!";
         case TOKEN_TILDE:   return "~";
+        case TOKEN_AMP:     return "&";
         default:            return "?";
     }
 }
@@ -182,7 +189,13 @@ void ast_print(const AstNode *node, int depth)
     break;
 
   case NODE_FUNC_DEF:
-    printf("FuncDef '%.*s' (%zu params)\n", (int)node->token.text_len, node->token.text, node->func_def.params.count);
+
+    printf("Funcdef '%.*s' returning '%s'",(int)node->token.text_len, node->token.text, type_kind_str(node->func_def.return_type.kind));
+    for(int i = 0; i < node->func_def.return_type.pointer_level; ++i) {
+      printf("*");
+    }
+      
+    printf("' (%zu params)\n", node->func_def.params.count);
     for(size_t i = 0; i < node->func_def.params.count; ++i) {
       ast_print(node->func_def.params.items[i], depth+1);
     }
@@ -214,7 +227,17 @@ void ast_print(const AstNode *node, int depth)
     if(node->var_decl.init)
       ast_print(node->var_decl.init, depth + 1);
     break;
-
+    
+  case NODE_SUBSCRIPT:
+    printf("Subscript:\n");
+    pretty_print(depth + 1);
+    printf("Array:\n");
+    ast_print(node->subscript.array, depth + 2);
+    pretty_print(depth + 1);
+    printf("Index:\n");
+    ast_print(node->subscript.index, depth + 2);
+    break;
+    
   case NODE_RETURN:
     printf("Return\n");
     ast_print(node->ret.value, depth + 1);

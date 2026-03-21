@@ -12,6 +12,7 @@ typedef enum {
 
 typedef struct {
   TypeKind kind;
+  int pointer_level;
   Token token;
 } Type;
 
@@ -33,6 +34,7 @@ typedef enum {
   NODE_STRING,
   NODE_CHAR_LIT,
   NODE_SYMBOL,
+  NODE_SUBSCRIPT,
 } NodeKind;
 
 typedef struct AstNode AstNode;
@@ -101,6 +103,11 @@ typedef struct {
 } Unary;
 
 typedef struct {
+  AstNode *array;
+  AstNode *index;
+} Subsctipt;
+  
+typedef struct {
   Token callee;
   NodeList args;
 } Call;
@@ -123,6 +130,7 @@ struct AstNode {
     Assign assign;
     Binary binary;
     Unary unary;
+    Subsctipt subscript;
     Call call;
   };
 };

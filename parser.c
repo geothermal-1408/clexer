@@ -106,6 +106,7 @@ static Type parse_type(Parser *p)
 {
   Type ty;
   ty.token = p->current;
+  ty.pointer_level = 0;
 
   switch(p->current.kw_kind) {
   case KW_INT: ty.kind =  TYPE_INT;  break;
@@ -117,6 +118,9 @@ static Type parse_type(Parser *p)
     break;
   }
   advance(p);
+  while(match(p, TOKEN_STAR)) {
+    ty.pointer_level++;
+  }
   return ty;
 }
 
@@ -124,7 +128,9 @@ static AstNode *parse_primary(Parser *p)
 {
   Token t = p->current;
 
-  if (t.kind == TOKEN_NUMBER || t.kind == TOKEN_STRING || t.kind == TOKEN_CHAR) {
+  if (t.kind == TOKEN_NUMBER ||
+      t.kind == TOKEN_STRING ||
+      t.kind == TOKEN_CHAR) {
     advance(p);
     NodeKind k = (t.kind == TOKEN_NUMBER) ? NODE_NUMBER :
                  (t.kind == TOKEN_STRING) ? NODE_STRING :
@@ -135,10 +141,11 @@ static AstNode *parse_primary(Parser *p)
   if(t.kind == TOKEN_SYMBOL) {
     advance(p);
 
+    AstNode *node = NULL;
     if(p->current.kind == TOKEN_LPAREN) {
       advance(p);
 
-      AstNode *node = astnode_alloc(NODE_CALL, t);
+      node = astnode_alloc(NODE_CALL, t);
       node->call.callee = t;
 
       while(p->current.kind != TOKEN_RPAREN &&
@@ -150,19 +157,48 @@ static AstNode *parse_primary(Parser *p)
       }
 
       expect(p, TOKEN_RPAREN, "function call");
-      return node;
+    } else { 
+      node = astnode_alloc(NODE_SYMBOL, t);
     }
-    return astnode_alloc(NODE_SYMBOL, t);
-  }
 
+    while(p->current.kind == TOKEN_LBRACKET && !p->has_error) {
+      Token bracket = p->current;
+      advance(p);
+      AstNode *index = parse_expr(p, 0);
+      expect(p, TOKEN_RBRACKET, "array subscript");
+
+      AstNode *sub = astnode_alloc(NODE_SUBSCRIPT, bracket);
+      sub->subscript.array = node;
+      sub->subscript.index = index;
+      node = sub;
+    }
+    return node;
+  }
+ 
   if(t.kind == TOKEN_LPAREN) {
     advance(p);
     AstNode *inner = parse_expr(p, 0);
     expect(p, TOKEN_RPAREN, "grouped expression");
+    
+    while(p->current.kind == TOKEN_LBRACKET && !p->has_error) {
+      Token bracket = p->current;
+      advance(p);
+      AstNode *index= parse_expr(p, 0);
+      expect(p, TOKEN_RBRACKET, "array subscript");
+
+      AstNode *sub = astnode_alloc(NODE_SUBSCRIPT, bracket);
+      sub->subscript.array = inner;
+      sub->subscript.index = index;
+      inner = sub;
+    }
     return inner;
   }
 
-  if(t.kind == TOKEN_MINUS || t.kind == TOKEN_BANG || t.kind == TOKEN_TILDE) {
+  if(t.kind == TOKEN_MINUS ||
+     t.kind == TOKEN_BANG  ||
+     t.kind == TOKEN_TILDE ||
+     t.kind == TOKEN_STAR  ||
+     t.kind == TOKEN_AMP) {
     advance(p);
     AstNode *operand = parse_expr(p, 14);
     AstNode *node = astnode_alloc(NODE_UNARY, t);
@@ -170,7 +206,7 @@ static AstNode *parse_primary(Parser *p)
     node->unary.operand = operand;
     return node;
   }
-
+  
   error(p, "expected an expression");
   advance(p);
   return NULL;
@@ -419,6 +455,9 @@ AstNode *parser_parse(Parser *p)
       size_t	saved_index = p->ts_index;
 
       advance(p);
+      while(p->current.kind == TOKEN_STAR) {
+	advance(p);
+      }
       advance(p);
       int is_func = (p->current.kind == TOKEN_LPAREN);
 

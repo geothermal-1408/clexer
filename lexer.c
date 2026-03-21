@@ -247,6 +247,10 @@ Token lexer_next(Lexer *l)
     SINGLE(TOKEN_LBRACE);
   case '}':
     SINGLE(TOKEN_RBRACE);
+  case '[':
+    SINGLE(TOKEN_LBRACKET);
+  case ']':
+    SINGLE(TOKEN_RBRACKET);
   case ';':
     SINGLE(TOKEN_SEMICOLON);
   case ',':
@@ -445,6 +449,8 @@ const char *token_kind_str(Token_kind kind)
         case TOKEN_RPAREN:      return "')'";
         case TOKEN_LBRACE:      return "'{'";
         case TOKEN_RBRACE:      return "'}'";
+        case TOKEN_LBRACKET:    return "'['";
+        case TOKEN_RBRACKET:    return "']'";
         case TOKEN_SEMICOLON:   return "';'";
         case TOKEN_COMMA:       return "','";
         case TOKEN_DOT:         return "'.'";
